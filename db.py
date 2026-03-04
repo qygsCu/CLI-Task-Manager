@@ -80,7 +80,7 @@ def get_all_notdone_titles() -> list:
     """
     con = sqlite3.connect(DB_FILE)
     cur = con.cursor()
-    get_all_notdone_titles_sql= """SELECT title FROM tasks WHERE is_done == 0"""
+    get_all_notdone_titles_sql= """SELECT title FROM tasks WHERE is_done = 0"""
     cur.execute(get_all_notdone_titles_sql)
     res = cur.fetchall()
     cur.close()
@@ -92,18 +92,17 @@ def delete_task(title: str):
     根据任务title删除任务
     """
     existed_titles = get_all_notdone_titles()
-    for i in existed_titles:
-        i = i[0]
+    existed_titles = [i[1] for i in existed_titles]
     if title not in existed_titles:
         print("该任务不在待办任务中！")
         res = process.extractOne(title, existed_titles)
         if (res[1] >= 75):
-            print(f"你是否在找：{res[0][0]}？")
+            print(f"你是否在找：{res[0][0]}")
         return 
     con = sqlite3.connect(DB_FILE)
     cur = con.cursor()
     delete_task_sql = f"""DELETE FROM tasks WHERE title = ?"""
-    cur.execute(delete_task_sql, title)
+    cur.execute(delete_task_sql, (title, ))
     con.commit()
     cur.close()
     con.close()
@@ -115,14 +114,12 @@ def mark_task_done(title: str):
     existed_titles = get_all_notdone_titles()
     if (title, ) not in existed_titles:
         all_titles = get_all_tasks()
-        for i in all_titles:
-            i = i[0]
+        all_titles = [x[1] for x in all_titles]
         if title not in all_titles:
             print("该任务不存在！")
             res = process.extractOne(title, existed_titles)
-            print(res[1])
             if (res[1] >= 10):
-                print(f"你是否在找：{res[0][0]}？")
+                print(f"你是否在找：{res[0][0]}")
         else:
             print("该任务已完成！")
         return 
@@ -138,12 +135,6 @@ def mark_task_done(title: str):
 
 
 if __name__ == "__main__":
-    delete_all_tasks()
-    add_task("写作业哈哈哈哈哈哈哈啊哈")
-    add_task("看剧")
-    print(get_all_tasks())
-    mark_task_done("写作业")
-    
-    print(get_all_tasks())
-    mark_task_done("写作业哈哈哈哈哈哈哈哈哈")
+    mark_task_done("写作业哈哈哈哈哈哈哈啊哈")
+    pass
     
