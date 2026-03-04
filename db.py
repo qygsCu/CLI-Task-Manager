@@ -1,5 +1,6 @@
 import sqlite3
-
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
 # 规范1：把数据库文件名定义为全局大写常量，方便以后统一修改
 DB_FILE = 'taskmaster.db'
@@ -21,6 +22,7 @@ def init_db():
         created_at TEXT DEFAULT CURRENT_TIMESTAMP)"""
     cur.execute(create_table_sql)
     con.commit()
+    cur.close()
     con.close()
 
 
@@ -31,7 +33,30 @@ def add_task(title: str):
     注意：执行完 INSERT、UPDATE、DELETE 后，必须调用 conn.commit() 保存更改！
     """
     # 你的任务：实现插入逻辑
+    existed_titles = get_all_notdone_titles()
+    if (title, ) in existed_titles:
+        print("该任务已存在！")
+        return 
+    con = sqlite3.connect(DB_FILE)
+    cur = con.cursor()
+    data = (title, )
+    add_task_sql = """INSERT INTO tasks (title) VALUES (?)"""
+    cur.execute(add_task_sql, data)
+    con.commit()
+    cur.close()
+    con.close()
 
+def delete_all_tasks():
+    """
+    删除所有任务
+    """
+    con = sqlite3.connect(DB_FILE)
+    cur = con.cursor()
+    delete_all_tasks_sql = """DELETE FROM tasks"""
+    cur.execute(delete_all_tasks_sql)
+    con.commit()
+    cur.close()
+    con.close()
 
 def get_all_tasks() -> list:
     """
@@ -39,8 +64,86 @@ def get_all_tasks() -> list:
     核心SQL思路：SELECT id, title, is_done FROM tasks
     注意：查询操作不需要 commit()，只需要 fetchall() 把数据拉回来。
     """
-    pass # 你的任务：实现查询并返回结果
+    # 你的任务：实现查询并返回结果
+    con = sqlite3.connect(DB_FILE)
+    cur = con.cursor()
+    get_all_tasks_sql = """SELECT id, title, is_done FROM tasks"""
+    cur.execute(get_all_tasks_sql)
+    res = cur.fetchall()
+    cur.close()
+    con.close()
+    return res
+
+def get_all_notdone_titles() -> list:
+    """
+    返回所有未完成的任务的title
+    """
+    con = sqlite3.connect(DB_FILE)
+    cur = con.cursor()
+    get_all_notdone_titles_sql= """SELECT title FROM tasks WHERE is_done == 0"""
+    cur.execute(get_all_notdone_titles_sql)
+    res = cur.fetchall()
+    cur.close()
+    con.close()
+    return res
+    
+def delete_task(title: str):
+    """
+    根据任务title删除任务
+    """
+    existed_titles = get_all_notdone_titles()
+    for i in existed_titles:
+        i = i[0]
+    if title not in existed_titles:
+        print("该任务不在待办任务中！")
+        res = process.extractOne(title, existed_titles)
+        if (res[1] >= 75):
+            print(f"你是否在找：{res[0][0]}？")
+        return 
+    con = sqlite3.connect(DB_FILE)
+    cur = con.cursor()
+    delete_task_sql = f"""DELETE FROM tasks WHERE title = ?"""
+    cur.execute(delete_task_sql, title)
+    con.commit()
+    cur.close()
+    con.close()
+
+def mark_task_done(title: str):
+    """
+    将任务标记为完成
+    """
+    existed_titles = get_all_notdone_titles()
+    if (title, ) not in existed_titles:
+        all_titles = get_all_tasks()
+        for i in all_titles:
+            i = i[0]
+        if title not in all_titles:
+            print("该任务不存在！")
+            res = process.extractOne(title, existed_titles)
+            print(res[1])
+            if (res[1] >= 10):
+                print(f"你是否在找：{res[0][0]}？")
+        else:
+            print("该任务已完成！")
+        return 
+    else:
+        con = sqlite3.connect(DB_FILE)
+        cur = con.cursor()
+        mark_task_done_sql = f"""UPDATE tasks SET is_done = 1 WHERE title = ?"""
+        cur.execute(mark_task_done_sql, (title, ))
+        con.commit()
+        cur.close()
+        con.close()
+        
+
 
 if __name__ == "__main__":
-    init_db()
-    print("数据库初始化成功")
+    delete_all_tasks()
+    add_task("写作业哈哈哈哈哈哈哈啊哈")
+    add_task("看剧")
+    print(get_all_tasks())
+    mark_task_done("写作业")
+    
+    print(get_all_tasks())
+    mark_task_done("写作业哈哈哈哈哈哈哈哈哈")
+    
